@@ -1,1 +1,4 @@
+#!/bin/sh
+docker stop whoami
+docker rm whoami
 docker run -d -p 8888:8000 -v /var/run/docker.sock:/var/run/docker.sock -v /etc/hostname:/etc/hostname_node --name whoami -t karek/whoami
