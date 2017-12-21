@@ -1,13 +1,12 @@
-FROM golang:alpine3.6 AS binary
-ADD . /app
-WORKDIR /app
-RUN go build -o http
+FROM golang AS binary
+ADD . /go/src/github.com/karekoho/whoami
+WORKDIR /go/src/github.com/karekoho/whoami
+RUN go-wrapper download docker.io/go-docker
+RUN go-wrapper install
 
-FROM alpine:3.6
-WORKDIR /app
-RUN apk update
-RUN apk add docker
+FROM golang
+WORKDIR /go/src/github.com/karekoho/whoami
 ENV PORT 8000
 EXPOSE 8000
-COPY --from=binary /app/http /app
-CMD ["/app/http"]
+COPY --from=binary /go/bin/whoami /go/bin
+CMD ["whoami"]
