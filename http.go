@@ -12,20 +12,33 @@ import (
 	"docker.io/go-docker/api/types"
 )
 
-func test(w http.ResponseWriter) {
-	cli, err := docker.NewEnvClient()
-	if err != nil {
-		panic(err)
-	}
+// ContainerInfo Some info from types.Container
+type ContainerInfo struct {
+	name string
+	ID   string
+}
 
+// Find a container by image name
+func (ci *ContainerInfo) findByImage(image string, cli *docker.Client) *ContainerInfo {
+
+	// Get the containers running on host
 	containers, err := cli.ContainerList(context.Background(), types.ContainerListOptions{})
+
 	if err != nil {
 		panic(err)
 	}
 
 	for _, container := range containers {
-		fmt.Fprintf(w, "\ncontainer.ID[:10]: %s\ncontainer.Image: %s", container.ID[:10], container.Image)
+		if container.Image == image {
+			ci.name = container.Names[0][1:] // Get the first name in list and skip leading "/"
+			ci.ID = container.ID[:12]        // Get the first 12 characters
+			return ci
+		}
 	}
+
+	ci.name = "unknown"
+	ci.ID = "unknown"
+	return ci
 }
 
 func main() {
@@ -34,6 +47,8 @@ func main() {
 		port = "8080"
 	}
 
+	// Get the host name of node
+	// TODO: read the first line and strip off newline
 	hostnameNode, err := ioutil.ReadFile("/etc/hostname_node")
 
 	if err != nil {
@@ -43,10 +58,17 @@ func main() {
 	fmt.Fprintf(os.Stdout, "Listening on :%s\n", port)
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		// fmt.Fprintf(w, "I'm %s\n", os.Hostname()) // Container id
-		fmt.Fprintf(w, "Node name: %s\nContainer ID: %s\nContainer name: %s",
-			string(hostnameNode), "???", "???")
-		test(w)
+		cli, err := docker.NewEnvClient()
+		if err != nil {
+			panic(err)
+		}
+
+		// Find the container by image name
+		ci := new(ContainerInfo)
+		ci.findByImage("karek/whoami", cli)
+
+		fmt.Fprintf(w, "Node name: %sContainer ID: %s\nContainer name: %s",
+			string(hostnameNode), ci.ID, ci.name)
 	})
 
 	log.Fatal(http.ListenAndServe(":"+port, nil))
