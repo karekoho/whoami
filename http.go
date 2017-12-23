@@ -19,13 +19,6 @@ type ContainerInfo struct {
 	ID   string
 }
 
-func exitOnError(w http.ResponseWriter, err error) {
-	if err != nil {
-		fmt.Println(w, err)
-		panic(err)
-	}
-}
-
 // Find a container by image name
 func (ci *ContainerInfo) findByImage(image string, cli *docker.Client) (*ContainerInfo, error) {
 
@@ -58,15 +51,21 @@ func main() {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		// Get the host name of node
 		hostnameNode, err := ioutil.ReadFile("/etc/hostname_node")
-		exitOnError(w, err)
+		if err != nil {
+			panic(err)
+		}
 
 		cli, err := docker.NewEnvClient()
-		exitOnError(w, err)
+		if err != nil {
+			panic(err)
+		}
 
 		// Find the container by image name
 		ci := new(ContainerInfo)
 		ci, err = ci.findByImage("karek/whoami", cli)
-		exitOnError(w, err)
+		if err != nil {
+			panic(err)
+		}
 
 		fmt.Fprintf(w, "Node name: %s\nContainer ID: %s\nContainer name: %s",
 			s.TrimRight(string(hostnameNode), "\n"), ci.ID, ci.name)
