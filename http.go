@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	s "strings"
 
 	"docker.io/go-docker"
 	"docker.io/go-docker/api/types"
@@ -18,27 +19,34 @@ type ContainerInfo struct {
 	ID   string
 }
 
+func exitOnError(w http.ResponseWriter, err error) {
+	if err != nil {
+		fmt.Println(w, err)
+		panic(err)
+	}
+}
+
 // Find a container by image name
-func (ci *ContainerInfo) findByImage(image string, cli *docker.Client) *ContainerInfo {
+func (ci *ContainerInfo) findByImage(image string, cli *docker.Client) (*ContainerInfo, error) {
 
 	// Get the containers running on host
 	containers, err := cli.ContainerList(context.Background(), types.ContainerListOptions{})
 
 	if err != nil {
-		panic(err)
+		return ci, err
 	}
 
 	for _, container := range containers {
 		if container.Image == image {
 			ci.name = container.Names[0][1:] // Get the first name in list and skip leading "/"
 			ci.ID = container.ID[:12]        // Get the first 12 characters
-			return ci
+			return ci, err
 		}
 	}
 
 	ci.name = "unknown"
 	ci.ID = "unknown"
-	return ci
+	return ci, err
 }
 
 func main() {
@@ -47,28 +55,21 @@ func main() {
 		port = "8080"
 	}
 
-	// Get the host name of node
-	// TODO: read the first line and strip off newline
-	hostnameNode, err := ioutil.ReadFile("/etc/hostname_node")
-
-	if err != nil {
-		panic(err)
-	}
-
-	fmt.Fprintf(os.Stdout, "Listening on :%s\n", port)
-
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		// Get the host name of node
+		hostnameNode, err := ioutil.ReadFile("/etc/hostname_node")
+		exitOnError(w, err)
+
 		cli, err := docker.NewEnvClient()
-		if err != nil {
-			panic(err)
-		}
+		exitOnError(w, err)
 
 		// Find the container by image name
 		ci := new(ContainerInfo)
-		ci.findByImage("karek/whoami", cli)
+		ci, err = ci.findByImage("karek/whoami", cli)
+		exitOnError(w, err)
 
-		fmt.Fprintf(w, "Node name: %sContainer ID: %s\nContainer name: %s",
-			string(hostnameNode), ci.ID, ci.name)
+		fmt.Fprintf(w, "Node name: %s\nContainer ID: %s\nContainer name: %s",
+			s.TrimRight(string(hostnameNode), "\n"), ci.ID, ci.name)
 	})
 
 	log.Fatal(http.ListenAndServe(":"+port, nil))
