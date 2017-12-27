@@ -50,7 +50,7 @@ func main() {
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		// Get the host name of node
-		hostnameNode, err := ioutil.ReadFile("/etc/hostname_node")
+		hostnameNode, err := ioutil.ReadFile("/etc/hostname")
 		if err != nil {
 			panic(err)
 		}
