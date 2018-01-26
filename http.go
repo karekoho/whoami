@@ -30,7 +30,7 @@ func (ci *ContainerInfo) findByImage(image string, cli *docker.Client) (*Contain
 	}
 
 	for _, container := range containers {
-		if container.Image == image {
+		if s.HasPrefix(container.Image, image) {
 			ci.name = container.Names[0][1:] // Get the first name in list and skip leading "/"
 			ci.ID = container.ID[:12]        // Get the first 12 characters
 			return ci, err
@@ -49,6 +49,7 @@ func main() {
 	}
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+
 		// Get the host name of node
 		hostnameNode, err := ioutil.ReadFile("/etc/hostname")
 		if err != nil {
@@ -67,7 +68,7 @@ func main() {
 			panic(err)
 		}
 
-		fmt.Fprintf(w, "Node name: %s\nContainer ID: %s\nContainer name: %s",
+		fmt.Fprintf(w, "Node name: %s\nContainer ID: %s\nContainer name: %s\n",
 			s.TrimRight(string(hostnameNode), "\n"), ci.ID, ci.name)
 	})
 
