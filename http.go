@@ -68,7 +68,7 @@ func main() {
 			panic(err)
 		}
 
-		fmt.Fprintf(w, "Node name: %s\nContainer ID: %s\nContainer name: %s\n",
+		fmt.Fprintf(w, "Node name: %s Container ID: %s Container name: %s\n",
 			s.TrimRight(string(hostnameNode), "\n"), ci.ID, ci.name)
 	})
 
